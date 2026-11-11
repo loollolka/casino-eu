@@ -1,7 +1,4 @@
-#pragma once
-
-int balance = 100;
-int bid = 0;
+п»ї#pragma once
 
 namespace casinotest2 {
 
@@ -13,28 +10,37 @@ namespace casinotest2 {
 	using namespace System::Drawing;
 
 	/// <summary>
-	/// Сводка для MyForm
+	/// Р“Р»Р°РІРЅРѕРµ РѕРєРЅРѕ СЂСѓР»РµС‚РєРё
 	/// </summary>
 	public ref class MyForm : public System::Windows::Forms::Form
 	{
 	public:
 		MyForm(void)
 		{
-			InitializeComponent();
-			this->Load += gcnew System::EventHandler(this, &MyForm::MyForm_Load);
+			balance = StartBalance;
+			bid = 0;
+			selectedBet = nullptr;
+			rng = gcnew Random();
 
-			// Убираем рамки окна
+			InitializeComponent();
+
+			// РЈР±РёСЂР°РµРј СЂР°РјРєРё РѕРєРЅР°
 			this->FormBorderStyle = System::Windows::Forms::FormBorderStyle::None;
 
-			// Добавляем обработчики для перетаскивания окна
+			// Р”РѕР±Р°РІР»СЏРµРј РѕР±СЂР°Р±РѕС‚С‡РёРєРё РґР»СЏ РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёСЏ РѕРєРЅР°
 			this->MouseDown += gcnew MouseEventHandler(this, &MyForm::Form_MouseDown);
 			this->MouseMove += gcnew MouseEventHandler(this, &MyForm::Form_MouseMove);
 			this->MouseUp += gcnew MouseEventHandler(this, &MyForm::Form_MouseUp);
+
+			// Р“РёС„РєРё Р·Р°РіСЂСѓР¶Р°РµРј РѕРґРёРЅ СЂР°Р·, Р° РЅРµ РЅР° РєР°Р¶РґС‹Р№ СЃРїРёРЅ
+			winImage = LoadGif(L"win.gif");
+			loseImage = LoadGif(L"lose.gif");
+			noMoneyImage = LoadGif(L"no_money.gif");
 		}
 
 	protected:
 		/// <summary>
-		/// Освободить все используемые ресурсы.
+		/// РћСЃРІРѕР±РѕРґРёС‚СЊ РІСЃРµ РёСЃРїРѕР»СЊР·СѓРµРјС‹Рµ СЂРµСЃСѓСЂСЃС‹.
 		/// </summary>
 		~MyForm()
 		{
@@ -42,48 +48,79 @@ namespace casinotest2 {
 			{
 				delete components;
 			}
+			pictureBox1->Image = nullptr;
+			delete winImage;
+			delete loseImage;
+			delete noMoneyImage;
 		}
 
 	private:
-		// Объявляем метод MyForm_Load
-		System::Void MyForm_Load(System::Object^ sender, System::EventArgs^ e) {
-			// Код, который должен выполняться при загрузке формы
-			this->your_balance->Text = balance.ToString(); // Устанавливаем начальный баланс
+		literal int StartBalance = 100;
+
+		int balance;
+		int bid;
+		// РўРµРєСЃС‚ РЅР°Р¶Р°С‚РѕР№ РєРЅРѕРїРєРё СЃС‚Р°РІРєРё: "17", "red", "row1", "1-12"... (nullptr вЂ” СЃС‚Р°РІРєР° РЅРµ РІС‹Р±СЂР°РЅР°)
+		String^ selectedBet;
+		Random^ rng;
+
+		Image^ winImage;
+		Image^ loseImage;
+		Image^ noMoneyImage;
+
+		// РС‰РµС‚ РєР°СЂС‚РёРЅРєСѓ СЂСЏРґРѕРј СЃ exe, РїРѕС‚РѕРј РІ СЂР°Р±РѕС‡РµР№ РїР°РїРєРµ (С‚Р°Рє СЂР°Р±РѕС‚Р°РµС‚ Рё Р·Р°РїСѓСЃРє РёР· Visual Studio).
+		// Р•СЃР»Рё С„Р°Р№Р»Р° РЅРµС‚ вЂ” РІРѕР·РІСЂР°С‰Р°РµС‚ nullptr, Рё РёРіСЂР° РїСЂРѕСЃС‚Рѕ РёРґС‘С‚ Р±РµР· Р°РЅРёРјР°С†РёРё.
+		static Image^ LoadGif(String^ fileName)
+		{
+			String^ path = System::IO::Path::Combine(Application::StartupPath, fileName);
+			if (!System::IO::File::Exists(path))
+				path = System::IO::Path::Combine(System::IO::Directory::GetCurrentDirectory(), fileName);
+			if (!System::IO::File::Exists(path))
+				return nullptr;
+
+			try
+			{
+				return Image::FromFile(path);
+			}
+			catch (Exception^)
+			{
+				return nullptr;
+			}
 		}
 
-		// Для отслеживания, была ли нажата кнопка мыши для перетаскивания
+		System::Void MyForm_Load(System::Object^ sender, System::EventArgs^ e) {
+			UpdateBalance();
+		}
+
+		// Р”Р»СЏ РѕС‚СЃР»РµР¶РёРІР°РЅРёСЏ, Р±С‹Р»Р° Р»Рё РЅР°Р¶Р°С‚Р° РєРЅРѕРїРєР° РјС‹С€Рё РґР»СЏ РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёСЏ
 		bool isMouseDown = false;
 		Point mouseOffset;
 
-		// Обработчик для начала перетаскивания окна
+		// РћР±СЂР°Р±РѕС‚С‡РёРє РґР»СЏ РЅР°С‡Р°Р»Р° РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёСЏ РѕРєРЅР° (С‚РѕР»СЊРєРѕ Р»РµРІРѕР№ РєРЅРѕРїРєРѕР№)
 		void Form_MouseDown(Object^ sender, MouseEventArgs^ e)
 		{
-			if (e->Button == MouseButtons)
+			if (e->Button == System::Windows::Forms::MouseButtons::Left)
 			{
 				isMouseDown = true;
-				// Сохраняем смещение относительно верхнего левого угла формы
+				// РЎРѕС…СЂР°РЅСЏРµРј СЃРјРµС‰РµРЅРёРµ РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ РІРµСЂС…РЅРµРіРѕ Р»РµРІРѕРіРѕ СѓРіР»Р° С„РѕСЂРјС‹
 				mouseOffset = e->Location;
 			}
 		}
 
-		// Обработчик для перетаскивания окна
+		// РћР±СЂР°Р±РѕС‚С‡РёРє РґР»СЏ РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёСЏ РѕРєРЅР°
 		void Form_MouseMove(Object^ sender, MouseEventArgs^ e)
 		{
 			if (isMouseDown)
 			{
-				// Перемещаем форму, рассчитывая новое положение
-				// Используем Location.X и Location.Y вместо Left и Top
 				this->Location = Point(this->Location.X + e->X - mouseOffset.X, this->Location.Y + e->Y - mouseOffset.Y);
 			}
 		}
 
-		// Обработчик для завершения перетаскивания
+		// РћР±СЂР°Р±РѕС‚С‡РёРє РґР»СЏ Р·Р°РІРµСЂС€РµРЅРёСЏ РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёСЏ
 		void Form_MouseUp(Object^ sender, MouseEventArgs^ e)
 		{
 			isMouseDown = false;
 		}
 
-	
 
 	private: System::Windows::Forms::Button^ button1;
 
@@ -203,14 +240,14 @@ private: System::Windows::Forms::Button^ button7;
 
 	private:
 		/// <summary>
-		/// Обязательная переменная конструктора.
+		/// РћР±СЏР·Р°С‚РµР»СЊРЅР°СЏ РїРµСЂРµРјРµРЅРЅР°СЏ РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂР°.
 		/// </summary>
 
 
 #pragma region Windows Form Designer generated code
 		/// <summary>
-		/// Требуемый метод для поддержки конструктора — не изменяйте 
-		/// содержимое этого метода с помощью редактора кода.
+		/// РўСЂРµР±СѓРµРјС‹Р№ РјРµС‚РѕРґ РґР»СЏ РїРѕРґРґРµСЂР¶РєРё РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂР° вЂ” РЅРµ РёР·РјРµРЅСЏР№С‚Рµ 
+		/// СЃРѕРґРµСЂР¶РёРјРѕРµ СЌС‚РѕРіРѕ РјРµС‚РѕРґР° СЃ РїРѕРјРѕС‰СЊСЋ СЂРµРґР°РєС‚РѕСЂР° РєРѕРґР°.
 		/// </summary>
 		void InitializeComponent(void)
 		{
@@ -565,7 +602,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_0->TabIndex = 20;
 			this->button_0->Text = L"0";
 			this->button_0->UseVisualStyleBackColor = false;
-			this->button_0->Click += gcnew System::EventHandler(this, &MyForm::button_0_Click);
+			this->button_0->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button3
 			// 
@@ -580,7 +617,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button3->TabIndex = 21;
 			this->button3->Text = L"3";
 			this->button3->UseVisualStyleBackColor = false;
-			this->button3->Click += gcnew System::EventHandler(this, &MyForm::button3_Click);
+			this->button3->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button4
 			// 
@@ -595,7 +632,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button4->TabIndex = 22;
 			this->button4->Text = L"2";
 			this->button4->UseVisualStyleBackColor = false;
-			this->button4->Click += gcnew System::EventHandler(this, &MyForm::button4_Click);
+			this->button4->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button5
 			// 
@@ -610,7 +647,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button5->TabIndex = 23;
 			this->button5->Text = L"1";
 			this->button5->UseVisualStyleBackColor = false;
-			this->button5->Click += gcnew System::EventHandler(this, &MyForm::button5_Click);
+			this->button5->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button6
 			// 
@@ -625,7 +662,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button6->TabIndex = 24;
 			this->button6->Text = L"6";
 			this->button6->UseVisualStyleBackColor = false;
-			this->button6->Click += gcnew System::EventHandler(this, &MyForm::button6_Click);
+			this->button6->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_9
 			// 
@@ -640,7 +677,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_9->TabIndex = 25;
 			this->button_9->Text = L"9";
 			this->button_9->UseVisualStyleBackColor = false;
-			this->button_9->Click += gcnew System::EventHandler(this, &MyForm::button_9_Click);
+			this->button_9->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button8
 			// 
@@ -655,7 +692,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button8->TabIndex = 26;
 			this->button8->Text = L"5";
 			this->button8->UseVisualStyleBackColor = false;
-			this->button8->Click += gcnew System::EventHandler(this, &MyForm::button8_Click);
+			this->button8->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_8
 			// 
@@ -670,7 +707,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_8->TabIndex = 27;
 			this->button_8->Text = L"8";
 			this->button_8->UseVisualStyleBackColor = false;
-			this->button_8->Click += gcnew System::EventHandler(this, &MyForm::button_8_Click);
+			this->button_8->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button10
 			// 
@@ -685,7 +722,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button10->TabIndex = 28;
 			this->button10->Text = L"4";
 			this->button10->UseVisualStyleBackColor = false;
-			this->button10->Click += gcnew System::EventHandler(this, &MyForm::button10_Click);
+			this->button10->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button11
 			// 
@@ -700,7 +737,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button11->TabIndex = 29;
 			this->button11->Text = L"7";
 			this->button11->UseVisualStyleBackColor = false;
-			this->button11->Click += gcnew System::EventHandler(this, &MyForm::button11_Click);
+			this->button11->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_16
 			// 
@@ -715,7 +752,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_16->TabIndex = 38;
 			this->button_16->Text = L"16";
 			this->button_16->UseVisualStyleBackColor = false;
-			this->button_16->Click += gcnew System::EventHandler(this, &MyForm::button_16_Click);
+			this->button_16->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_13
 			// 
@@ -730,7 +767,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_13->TabIndex = 37;
 			this->button_13->Text = L"13";
 			this->button_13->UseVisualStyleBackColor = false;
-			this->button_13->Click += gcnew System::EventHandler(this, &MyForm::button_13_Click);
+			this->button_13->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_17
 			// 
@@ -745,7 +782,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_17->TabIndex = 36;
 			this->button_17->Text = L"17";
 			this->button_17->UseVisualStyleBackColor = false;
-			this->button_17->Click += gcnew System::EventHandler(this, &MyForm::button_17_Click);
+			this->button_17->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_14
 			// 
@@ -760,7 +797,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_14->TabIndex = 35;
 			this->button_14->Text = L"14";
 			this->button_14->UseVisualStyleBackColor = false;
-			this->button_14->Click += gcnew System::EventHandler(this, &MyForm::button_14_Click);
+			this->button_14->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_18
 			// 
@@ -775,7 +812,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_18->TabIndex = 34;
 			this->button_18->Text = L"18";
 			this->button_18->UseVisualStyleBackColor = false;
-			this->button_18->Click += gcnew System::EventHandler(this, &MyForm::button_18_Click);
+			this->button_18->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_15
 			// 
@@ -790,7 +827,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_15->TabIndex = 33;
 			this->button_15->Text = L"15";
 			this->button_15->UseVisualStyleBackColor = false;
-			this->button_15->Click += gcnew System::EventHandler(this, &MyForm::button_15_Click);
+			this->button_15->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_10
 			// 
@@ -805,7 +842,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_10->TabIndex = 32;
 			this->button_10->Text = L"10";
 			this->button_10->UseVisualStyleBackColor = false;
-			this->button_10->Click += gcnew System::EventHandler(this, &MyForm::button_10_Click);
+			this->button_10->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_11
 			// 
@@ -820,7 +857,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_11->TabIndex = 31;
 			this->button_11->Text = L"11";
 			this->button_11->UseVisualStyleBackColor = false;
-			this->button_11->Click += gcnew System::EventHandler(this, &MyForm::button_11_Click);
+			this->button_11->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_12
 			// 
@@ -835,7 +872,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_12->TabIndex = 30;
 			this->button_12->Text = L"12";
 			this->button_12->UseVisualStyleBackColor = false;
-			this->button_12->Click += gcnew System::EventHandler(this, &MyForm::button_12_Click);
+			this->button_12->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_25
 			// 
@@ -850,7 +887,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_25->TabIndex = 47;
 			this->button_25->Text = L"25";
 			this->button_25->UseVisualStyleBackColor = false;
-			this->button_25->Click += gcnew System::EventHandler(this, &MyForm::button_25_Click);
+			this->button_25->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_22
 			// 
@@ -865,7 +902,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_22->TabIndex = 46;
 			this->button_22->Text = L"22";
 			this->button_22->UseVisualStyleBackColor = false;
-			this->button_22->Click += gcnew System::EventHandler(this, &MyForm::button_22_Click);
+			this->button_22->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_26
 			// 
@@ -880,7 +917,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_26->TabIndex = 45;
 			this->button_26->Text = L"26";
 			this->button_26->UseVisualStyleBackColor = false;
-			this->button_26->Click += gcnew System::EventHandler(this, &MyForm::button_26_Click);
+			this->button_26->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_23
 			// 
@@ -895,7 +932,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_23->TabIndex = 44;
 			this->button_23->Text = L"23";
 			this->button_23->UseVisualStyleBackColor = false;
-			this->button_23->Click += gcnew System::EventHandler(this, &MyForm::button_23_Click);
+			this->button_23->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_27
 			// 
@@ -910,7 +947,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_27->TabIndex = 43;
 			this->button_27->Text = L"27";
 			this->button_27->UseVisualStyleBackColor = false;
-			this->button_27->Click += gcnew System::EventHandler(this, &MyForm::button_27_Click);
+			this->button_27->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_24
 			// 
@@ -925,7 +962,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_24->TabIndex = 42;
 			this->button_24->Text = L"24";
 			this->button_24->UseVisualStyleBackColor = false;
-			this->button_24->Click += gcnew System::EventHandler(this, &MyForm::button_24_Click);
+			this->button_24->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_19
 			// 
@@ -940,7 +977,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_19->TabIndex = 41;
 			this->button_19->Text = L"19";
 			this->button_19->UseVisualStyleBackColor = false;
-			this->button_19->Click += gcnew System::EventHandler(this, &MyForm::button_19_Click);
+			this->button_19->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_20
 			// 
@@ -955,7 +992,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_20->TabIndex = 40;
 			this->button_20->Text = L"20";
 			this->button_20->UseVisualStyleBackColor = false;
-			this->button_20->Click += gcnew System::EventHandler(this, &MyForm::button_20_Click);
+			this->button_20->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_21
 			// 
@@ -970,7 +1007,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_21->TabIndex = 39;
 			this->button_21->Text = L"21";
 			this->button_21->UseVisualStyleBackColor = false;
-			this->button_21->Click += gcnew System::EventHandler(this, &MyForm::button_21_Click);
+			this->button_21->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_34
 			// 
@@ -985,7 +1022,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_34->TabIndex = 56;
 			this->button_34->Text = L"34";
 			this->button_34->UseVisualStyleBackColor = false;
-			this->button_34->Click += gcnew System::EventHandler(this, &MyForm::button_34_Click);
+			this->button_34->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_31
 			// 
@@ -1000,7 +1037,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_31->TabIndex = 55;
 			this->button_31->Text = L"31";
 			this->button_31->UseVisualStyleBackColor = false;
-			this->button_31->Click += gcnew System::EventHandler(this, &MyForm::button_31_Click);
+			this->button_31->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_35
 			// 
@@ -1015,7 +1052,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_35->TabIndex = 54;
 			this->button_35->Text = L"35";
 			this->button_35->UseVisualStyleBackColor = false;
-			this->button_35->Click += gcnew System::EventHandler(this, &MyForm::button_35_Click);
+			this->button_35->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_32
 			// 
@@ -1030,7 +1067,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_32->TabIndex = 53;
 			this->button_32->Text = L"32";
 			this->button_32->UseVisualStyleBackColor = false;
-			this->button_32->Click += gcnew System::EventHandler(this, &MyForm::button_32_Click);
+			this->button_32->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_36
 			// 
@@ -1045,7 +1082,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_36->TabIndex = 52;
 			this->button_36->Text = L"36";
 			this->button_36->UseVisualStyleBackColor = false;
-			this->button_36->Click += gcnew System::EventHandler(this, &MyForm::button_36_Click);
+			this->button_36->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_33
 			// 
@@ -1060,7 +1097,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_33->TabIndex = 51;
 			this->button_33->Text = L"33";
 			this->button_33->UseVisualStyleBackColor = false;
-			this->button_33->Click += gcnew System::EventHandler(this, &MyForm::button_33_Click);
+			this->button_33->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_28
 			// 
@@ -1075,7 +1112,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_28->TabIndex = 50;
 			this->button_28->Text = L"28";
 			this->button_28->UseVisualStyleBackColor = false;
-			this->button_28->Click += gcnew System::EventHandler(this, &MyForm::button_28_Click);
+			this->button_28->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_29
 			// 
@@ -1090,7 +1127,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_29->TabIndex = 49;
 			this->button_29->Text = L"29";
 			this->button_29->UseVisualStyleBackColor = false;
-			this->button_29->Click += gcnew System::EventHandler(this, &MyForm::button_29_Click);
+			this->button_29->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button_30
 			// 
@@ -1105,7 +1142,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button_30->TabIndex = 48;
 			this->button_30->Text = L"30";
 			this->button_30->UseVisualStyleBackColor = false;
-			this->button_30->Click += gcnew System::EventHandler(this, &MyForm::button_30_Click);
+			this->button_30->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button39
 			// 
@@ -1120,7 +1157,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button39->TabIndex = 57;
 			this->button39->Text = L"1-12";
 			this->button39->UseVisualStyleBackColor = false;
-			this->button39->Click += gcnew System::EventHandler(this, &MyForm::button39_Click);
+			this->button39->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button40
 			// 
@@ -1135,7 +1172,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button40->TabIndex = 58;
 			this->button40->Text = L"13-24";
 			this->button40->UseVisualStyleBackColor = false;
-			this->button40->Click += gcnew System::EventHandler(this, &MyForm::button40_Click);
+			this->button40->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button41
 			// 
@@ -1150,7 +1187,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button41->TabIndex = 59;
 			this->button41->Text = L"25-36";
 			this->button41->UseVisualStyleBackColor = false;
-			this->button41->Click += gcnew System::EventHandler(this, &MyForm::button41_Click);
+			this->button41->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button42
 			// 
@@ -1165,7 +1202,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button42->TabIndex = 60;
 			this->button42->Text = L"1-18";
 			this->button42->UseVisualStyleBackColor = false;
-			this->button42->Click += gcnew System::EventHandler(this, &MyForm::button42_Click);
+			this->button42->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button43
 			// 
@@ -1180,7 +1217,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button43->TabIndex = 61;
 			this->button43->Text = L"EVEN";
 			this->button43->UseVisualStyleBackColor = false;
-			this->button43->Click += gcnew System::EventHandler(this, &MyForm::button43_Click);
+			this->button43->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button46
 			// 
@@ -1195,7 +1232,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button46->TabIndex = 65;
 			this->button46->Text = L"19-36";
 			this->button46->UseVisualStyleBackColor = false;
-			this->button46->Click += gcnew System::EventHandler(this, &MyForm::button46_Click);
+			this->button46->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button47
 			// 
@@ -1210,7 +1247,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button47->TabIndex = 64;
 			this->button47->Text = L"ODD";
 			this->button47->UseVisualStyleBackColor = false;
-			this->button47->Click += gcnew System::EventHandler(this, &MyForm::button47_Click);
+			this->button47->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button44
 			// 
@@ -1225,7 +1262,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button44->TabIndex = 67;
 			this->button44->Text = L"black";
 			this->button44->UseVisualStyleBackColor = false;
-			this->button44->Click += gcnew System::EventHandler(this, &MyForm::button44_Click);
+			this->button44->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button45
 			// 
@@ -1240,7 +1277,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button45->TabIndex = 66;
 			this->button45->Text = L"red";
 			this->button45->UseVisualStyleBackColor = false;
-			this->button45->Click += gcnew System::EventHandler(this, &MyForm::button45_Click);
+			this->button45->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button50
 			// 
@@ -1255,7 +1292,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button50->TabIndex = 68;
 			this->button50->Text = L"row1";
 			this->button50->UseVisualStyleBackColor = false;
-			this->button50->Click += gcnew System::EventHandler(this, &MyForm::button50_Click);
+			this->button50->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button48
 			// 
@@ -1270,7 +1307,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button48->TabIndex = 69;
 			this->button48->Text = L"row2";
 			this->button48->UseVisualStyleBackColor = false;
-			this->button48->Click += gcnew System::EventHandler(this, &MyForm::button48_Click);
+			this->button48->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// button49
 			// 
@@ -1285,7 +1322,7 @@ private: System::Windows::Forms::Button^ button7;
 			this->button49->TabIndex = 70;
 			this->button49->Text = L"row3";
 			this->button49->UseVisualStyleBackColor = false;
-			this->button49->Click += gcnew System::EventHandler(this, &MyForm::button49_Click);
+			this->button49->Click += gcnew System::EventHandler(this, &MyForm::bet_Click);
 			// 
 			// pictureBox2
 			// 
@@ -1431,463 +1468,182 @@ private: System::Windows::Forms::Button^ button7;
 
 		}
 #pragma endregion
+	// ---------------------------------------------------------------
+	// Р›РѕРіРёРєР° РёРіСЂС‹
+	// ---------------------------------------------------------------
+
+	static bool IsRed(int n)
+	{
+		switch (n)
+		{
+		case 1: case 3: case 5: case 7: case 9: case 12:
+		case 14: case 16: case 18: case 19: case 21: case 23:
+		case 25: case 27: case 30: case 32: case 34: case 36:
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	// РњРЅРѕР¶РёС‚РµР»СЊ РІС‹РёРіСЂС‹С€Р° РґР»СЏ СЃС‚Р°РІРєРё bet, РµСЃР»Рё РІС‹РїР°Р»Рѕ С‡РёСЃР»Рѕ n.
+	// 0 вЂ” СЃС‚Р°РІРєР° РїСЂРѕРёРіСЂР°Р»Р°. РџСЂРё РІС‹РёРіСЂС‹С€Рµ РёРіСЂРѕРє РїРѕР»СѓС‡Р°РµС‚ СЃС‚Р°РІРєСѓ * РјРЅРѕР¶РёС‚РµР»СЊ.
+	static int GetPayout(String^ bet, int n)
+	{
+		int number;
+		if (Int32::TryParse(bet, number))
+			return number == n ? 35 : 0;   // СЃС‚Р°РІРєР° РЅР° РѕРґРЅРѕ С‡РёСЃР»Рѕ
+
+		if (n == 0)
+			return 0;                      // РЅР° Р·РµСЂРѕ РІСЃРµ РѕСЃС‚Р°Р»СЊРЅС‹Рµ СЃС‚Р°РІРєРё РїСЂРѕРёРіСЂС‹РІР°СЋС‚
+
+		if (bet == L"row1")  return n % 3 == 0 ? 2 : 0;   // 3, 6, 9 ... 36
+		if (bet == L"row2")  return n % 3 == 2 ? 2 : 0;   // 2, 5, 8 ... 35
+		if (bet == L"row3")  return n % 3 == 1 ? 2 : 0;   // 1, 4, 7 ... 34
+		if (bet == L"1-12")  return n <= 12 ? 2 : 0;
+		if (bet == L"13-24") return n >= 13 && n <= 24 ? 2 : 0;
+		if (bet == L"25-36") return n >= 25 ? 2 : 0;
+		if (bet == L"1-18")  return n <= 18 ? 1 : 0;
+		if (bet == L"19-36") return n >= 19 ? 1 : 0;
+		if (bet == L"EVEN")  return n % 2 == 0 ? 1 : 0;
+		if (bet == L"ODD")   return n % 2 == 1 ? 1 : 0;
+		if (bet == L"red")   return IsRed(n) ? 1 : 0;
+		if (bet == L"black") return IsRed(n) ? 0 : 1;
+		return 0;
+	}
+
+	void UpdateBalance()
+	{
+		your_balance->Text = balance.ToString();
+	}
+
+	void SetBid(int value)
+	{
+		bid = Math::Max(0, value);
+		your_bid_field->Text = bid.ToString();
+	}
+
+	void ResetGame()
+	{
+		balance = StartBalance;
+		UpdateBalance();
+		SetBid(0);
+	}
+
+	// РџРѕРєР°Р·С‹РІР°РµС‚ РіРёС„РєСѓ РЅР° 4 СЃРµРєСѓРЅРґС‹ (РїРѕС‚РѕРј timer1 РµС‘ СѓР±РёСЂР°РµС‚)
+	void ShowGif(Image^ image)
+	{
+		timer1->Stop();
+		pictureBox1->Image = nullptr;
+		if (image != nullptr)
+			image->SelectActiveFrame(System::Drawing::Imaging::FrameDimension::Time, 0); // Р°РЅРёРјР°С†РёСЏ СЃ РЅР°С‡Р°Р»Р°
+		pictureBox1->Image = image;
+		timer1->Start();
+	}
+
+	// ---------------------------------------------------------------
+	// РћР±СЂР°Р±РѕС‚С‡РёРєРё
+	// ---------------------------------------------------------------
+
+	// Spin
 	private: System::Void button1_Click(System::Object^ sender, System::EventArgs^ e) {
-		int row_1_arr[12] = { 3, 6 ,9 ,12 ,15, 18, 21, 24, 27, 30, 33, 36};
-		int row_2_arr[12] = { 2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35 };
-		int row_3_arr[12] = { 1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34 };
-		int nums_1_12_arr[12] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 };
-		int nums_13_24_arr[12] = { 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24 };
-		int nums_25_36_arr[12] = { 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36 };
-		int nums_1_18_arr[18] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18 };
-		int nums_19_36_arr[18] = { 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36 };
-		int even_arr[18] = { 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36 };
-		int odd_arr[18] = { 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35 };
-		int red_arr[18] = { 1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36 };
-		int black_arr[18] = { 2, 4, 6, 8, 10, 11, 13, 15, 17, 20, 22, 24, 26, 28, 29, 31, 33, 35 };
-
-		bool win = false;
-		// Убедитесь, что у вас есть изображение "cat.jpg" в том же каталоге, что и исполняемый файл
-
-		Random^ rand = gcnew Random();
-		int randomNumber = rand->Next(0, 1);
-		if (bid <= 0) {
-			MessageBox::Show("Please enter a valid number in your_bid_field!");
+		if (selectedBet == nullptr) {
+			MessageBox::Show(L"Choose what to bet on first.");
 			return;
 		}
-		// Выводим случайное число в текстовое поле
-		
-		String^ inputText = your_bid_field->Text;
 
-		// Шаг 2: Преобразуем текст в число
-
-		bool isNumber = Int32::TryParse(inputText, bid);
-
+		int value;
+		if (!Int32::TryParse(your_bid_field->Text, value) || value <= 0) {
+			MessageBox::Show(L"Enter a bet greater than 0.");
+			return;
+		}
+		bid = value;
 
 		if (bid > balance) {
-			MessageBox::Show("To much!!!");
-			return;
-		}
-		if (textBox2->Text == "")
-		{
-			MessageBox::Show("Please choise a number ");
+			MessageBox::Show(L"Your bet is bigger than your balance.");
 			return;
 		}
 
-		if (!isNumber)
-		{
-			MessageBox::Show("Please enter a valid number in your_bid_field!");
-			return;
-		}
-
-
-
-				if (textBox2->Text == "row 1") {
-					for (int i = 0; i < 12; i++) { 
-						if (randomNumber == row_1_arr[i]) {
-							timer1->Stop();
-							balance = balance + bid * 2;
-							your_balance->Text = balance.ToString();
-							pictureBox1->Image = Image::FromFile("win.gif");
-							timer1->Start();
-							win = true;
-						}
-					}
-				}
-
-				if (textBox2->Text == "row 2") {
-					for (int i = 0; i < 12; i++) {
-						if (randomNumber == row_2_arr[i]) {
-							timer1->Stop();
-							balance = balance + bid * 2;
-							your_balance->Text = balance.ToString();
-							pictureBox1->Image = Image::FromFile("win.gif");
-							timer1->Start();
-							win = true;
-						}
-					}
-				}
-
-				if (textBox2->Text == "row 3") {
-					for (int i = 0; i < 12; i++) {
-						if (randomNumber == row_3_arr[i]) {
-							timer1->Stop();
-							balance = balance + bid * 2;
-							your_balance->Text = balance.ToString();
-							pictureBox1->Image = Image::FromFile("win.gif");
-							timer1->Start();
-							win = true;
-						}
-					}
-				}
-
-				if (textBox2->Text == "1-12") {
-					for (int i = 0; i < 12; i++) {
-						if (randomNumber == nums_1_12_arr[i]) {
-							timer1->Stop();
-							balance = balance + bid * 2;
-							your_balance->Text = balance.ToString();
-							pictureBox1->Image = Image::FromFile("win.gif");
-							timer1->Start();
-							win = true;
-						}
-					}
-				}
-
-				if (textBox2->Text == "13-24") {
-					for (int i = 0; i < 12; i++) {
-						if (randomNumber == nums_13_24_arr[i]) {
-							timer1->Stop();
-							balance = balance + bid * 2;
-							your_balance->Text = balance.ToString();
-							pictureBox1->Image = Image::FromFile("win.gif");
-							timer1->Start();
-							win = true;
-						}
-					}
-				}
-
-				if (textBox2->Text == "25-36") {
-					for (int i = 0; i < 12; i++) {
-						if (randomNumber == nums_25_36_arr[i]) {
-							timer1->Stop();
-							balance = balance + bid * 2;
-							your_balance->Text = balance.ToString();
-							pictureBox1->Image = Image::FromFile("win.gif");
-							timer1->Start();
-							win = true;
-						}
-					}
-				}
-
-				if (textBox2->Text == "1-18") {
-					for (int i = 0; i < 18; i++) {
-						if (randomNumber == nums_1_18_arr[i]) {
-							timer1->Stop();
-							balance = balance + bid;
-							your_balance->Text = balance.ToString();
-							pictureBox1->Image = Image::FromFile("win.gif");
-							timer1->Start();
-							win = true;
-						}
-					}
-				}
-
-				if (textBox2->Text == "19-36") {
-					for (int i = 0; i < 18; i++) {
-						if (randomNumber == nums_19_36_arr[i]) {
-							timer1->Stop();
-							balance = balance + bid;
-							your_balance->Text = balance.ToString();
-							pictureBox1->Image = Image::FromFile("win.gif");
-							timer1->Start();
-							win = true;
-						}
-					}
-				}
-
-				if (textBox2->Text == "EVEN") {
-					for (int i = 0; i < 18; i++) {
-						if (randomNumber == even_arr[i]) {
-							timer1->Stop();
-							balance = balance + bid;
-							your_balance->Text = balance.ToString();
-							pictureBox1->Image = Image::FromFile("win.gif");
-							timer1->Start();
-							win = true;
-						}
-					}
-				}
-
-				if (textBox2->Text == "ODD") {
-					for (int i = 0; i < 18; i++) {
-						if (randomNumber == odd_arr[i]) {
-							timer1->Stop();
-							balance = balance + bid;
-							your_balance->Text = balance.ToString();
-							pictureBox1->Image = Image::FromFile("win.gif");
-							timer1->Start();
-							win = true;
-						}
-					}
-				}
-
-				if (textBox2->Text == "red") {
-					for (int i = 0; i < 18; i++) {
-						if (randomNumber == red_arr[i]) {
-							timer1->Stop();
-							balance = balance + bid;
-							your_balance->Text = balance.ToString();
-							pictureBox1->Image = Image::FromFile("win.gif");
-							timer1->Start();
-							win = true;
-						}
-					}
-				}
-
-				if (textBox2->Text == "black") {
-					for (int i = 0; i < 18; i++) {
-						if (randomNumber == black_arr[i]) {
-							timer1->Stop();
-							balance = balance + bid;
-							your_balance->Text = balance.ToString();
-							pictureBox1->Image = Image::FromFile("win.gif");
-							timer1->Start();
-							win = true;
-						}
-					}
-				}
-				if (randomNumber.ToString() == textBox2->Text)
-				{
-					timer1->Stop();
-					balance = balance + bid * 35;
-					your_balance->Text = balance.ToString();
-					pictureBox1->Image = Image::FromFile("win.gif");
-					timer1->Start();
-					win = true;
-				}
-
-
-
-				if (win == false) {
-					timer1->Stop();
-					timer1->Start();
-					balance = balance - bid;
-					your_balance->Text = balance.ToString();
-
-					if (balance <= 0) {
-						timer1->Start();
-						MessageBox::Show("You don't have enough money try again \n Balance = 100");
-						balance = 100;
-						your_balance->Text = balance.ToString();
-						pictureBox1->Image = Image::FromFile("no_money.gif");
-						return;					
-					} else 	pictureBox1->Image = Image::FromFile("lose.gif");
-				}
-
+		int randomNumber = rng->Next(0, 37);   // 0..36, РІРµСЂС…РЅСЏСЏ РіСЂР°РЅРёС†Р° РЅРµ РІРєР»СЋС‡Р°РµС‚СЃСЏ
 		textBox1->Text = randomNumber.ToString();
+
+		int payout = GetPayout(selectedBet, randomNumber);
+		if (payout > 0) {
+			balance += bid * payout;
+			UpdateBalance();
+			ShowGif(winImage);
+			return;
+		}
+
+		balance -= bid;
+		UpdateBalance();
+		if (balance > 0) {
+			ShowGif(loseImage);
+			return;
+		}
+
+		ShowGif(noMoneyImage);
+		MessageBox::Show(L"You are out of money! The game starts over with a balance of 100.");
+		ResetGame();
 	}
 
 	private: System::Void label1_Click(System::Object^ sender, System::EventArgs^ e) {
 	}
-private: System::Void timer1_Tick(System::Object^ sender, System::EventArgs^ e) {
-	pictureBox1->Image = nullptr;
-	timer1->Stop();
-}
-private: System::Void button_zero_Click(System::Object^ sender, System::EventArgs^ e) {
-	your_bid_field->Text = "0";
-	bid = 0;
-}
-private: System::Void button_plus_Click(System::Object^ sender, System::EventArgs^ e) {
-	bid = bid + 10;
-	your_bid_field->Text = bid.ToString();
-}
-private: System::Void button_plus20_Click(System::Object^ sender, System::EventArgs^ e) {
-	bid = bid + 20;
-	your_bid_field->Text = bid.ToString();
-}
-private: System::Void button_minus_Click(System::Object^ sender, System::EventArgs^ e) {
-	bid = bid - 10;
-	your_bid_field->Text = bid.ToString();
-}
-private: System::Void button_minus20_Click(System::Object^ sender, System::EventArgs^ e) {
-	bid = bid - 20;
-	your_bid_field->Text = bid.ToString();	
-}
-private: System::Void your_bid_field_TextChanged(System::Object^ sender, System::EventArgs^ e) {
-	if (your_bid_field->Text != "") {
-		bid = Convert::ToInt32(your_bid_field->Text);
+
+	private: System::Void timer1_Tick(System::Object^ sender, System::EventArgs^ e) {
+		pictureBox1->Image = nullptr;
+		timer1->Stop();
 	}
-	
-}
-private: System::Void button_half_Click(System::Object^ sender, System::EventArgs^ e) {
-	bid = balance / 2;
-	your_bid_field->Text = bid.ToString();
-}
-private: System::Void button_all_in_Click(System::Object^ sender, System::EventArgs^ e) {
-	bid = balance;
-	your_bid_field->Text = bid.ToString();
-}
-private: System::Void button1_4_Click(System::Object^ sender, System::EventArgs^ e) {
-	bid = balance / 4;
-	your_bid_field->Text = bid.ToString();
-}
-private: System::Void button5_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "1";
-}
-private: System::Void button4_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "2";
-}
-private: System::Void button3_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "3";
-}
-private: System::Void button10_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "4";
-}
-private: System::Void button8_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "5";
-}
-private: System::Void button6_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "6";
-}
-private: System::Void button11_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "7";
-}
-private: System::Void button_0_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "0";
-}
-private: System::Void button_8_Click(System::Object^ sender, System::EventArgs^ e) {
-		   textBox2->Text = "8";
-	   }
-private: System::Void button_9_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "9";
-}
 
-private: System::Void button_10_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "10";
-}
-private: System::Void button_11_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "11";
-}
-private: System::Void button_12_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "12";
-}
-private: System::Void button_13_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "13";
-}
-private: System::Void button_14_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "14";
-}
-private: System::Void button_15_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "15";
-}
-private: System::Void button_16_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "16";
-}
-private: System::Void button_17_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "17";
-}
-private: System::Void button_18_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "18";
-}
-private: System::Void button_19_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "19";
-
-}
-private: System::Void button_20_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "20";
-
-}
-private: System::Void button_21_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "21";
-
-}
-private: System::Void button_22_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "22";
-
-}
-private: System::Void button_23_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "23";
-}
-private: System::Void button_24_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "24";
-}
-private: System::Void button_25_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "25";
-}
-private: System::Void button_26_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "26";
-}
-private: System::Void button_27_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "27";
-}
-private: System::Void button_28_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "28";
-}
-private: System::Void button_29_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "29";
-}
-private: System::Void button_30_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "30";
-}
-private: System::Void button_31_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "31";
-}
-private: System::Void button_32_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "32";
-}
-private: System::Void button_33_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "33";
-}
-private: System::Void button_34_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "34";
-}
-private: System::Void button_35_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "35";
-}
-private: System::Void button_36_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "36";
-}
-private: System::Void button39_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "1-12";
-}
-private: System::Void button50_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "row 1";
-}
-private: System::Void button48_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "row 2";
-}
-private: System::Void button49_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "row 3";
-}
-private: System::Void button42_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "1-18";
-}
-private: System::Void button43_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "EVEN";
-}
-private: System::Void button45_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "red";
-}
-
-private: System::Void button44_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "black";
-}
-
-private: System::Void button40_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "13-24";
-}
-
-private: System::Void button41_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "25-36";
-}
-
-private: System::Void button46_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "19-36";
-}
-
-private: System::Void button47_Click(System::Object^ sender, System::EventArgs^ e) {
-	textBox2->Text = "ODD";
-}
-private: System::Void button2_Click(System::Object^ sender, System::EventArgs^ e) {
-
-	System::Windows::Forms::DialogResult result = MessageBox::Show("Вы уверены?", "Подтверждение", MessageBoxButtons::YesNo, MessageBoxIcon::Question);
-
-	if (result == System::Windows::Forms::DialogResult::Yes)
-	{
-		balance = 100;
-		your_balance->Text = balance.ToString();
-		your_bid_field->Text = "0";
+	// РљРЅРѕРїРєРё РёР·РјРµРЅРµРЅРёСЏ СЃС‚Р°РІРєРё
+	private: System::Void button_zero_Click(System::Object^ sender, System::EventArgs^ e) {
+		SetBid(0);
 	}
-	else if (result == System::Windows::Forms::DialogResult::No)
-	{
-		MessageBox::Show("?");
+	private: System::Void button_plus_Click(System::Object^ sender, System::EventArgs^ e) {
+		SetBid(bid + 10);
 	}
-}
-private: System::Void button7_Click(System::Object^ sender, System::EventArgs^ e) {
-	Application::Exit();
-}
+	private: System::Void button_plus20_Click(System::Object^ sender, System::EventArgs^ e) {
+		SetBid(bid + 20);
+	}
+	private: System::Void button_minus_Click(System::Object^ sender, System::EventArgs^ e) {
+		SetBid(bid - 10);
+	}
+	private: System::Void button_minus20_Click(System::Object^ sender, System::EventArgs^ e) {
+		SetBid(bid - 20);
+	}
+	private: System::Void button_half_Click(System::Object^ sender, System::EventArgs^ e) {
+		SetBid(balance / 2);
+	}
+	private: System::Void button1_4_Click(System::Object^ sender, System::EventArgs^ e) {
+		SetBid(balance / 4);
+	}
+	private: System::Void button_all_in_Click(System::Object^ sender, System::EventArgs^ e) {
+		SetBid(balance);
+	}
+
+	// Р СѓС‡РЅРѕР№ РІРІРѕРґ СЃС‚Р°РІРєРё: РјСѓСЃРѕСЂ Рё РѕС‚СЂРёС†Р°С‚РµР»СЊРЅС‹Рµ С‡РёСЃР»Р° СЃС‡РёС‚Р°РµРј РЅСѓР»С‘Рј, Р±РµР· РёСЃРєР»СЋС‡РµРЅРёР№
+	private: System::Void your_bid_field_TextChanged(System::Object^ sender, System::EventArgs^ e) {
+		int value;
+		bid = (Int32::TryParse(your_bid_field->Text, value) && value > 0) ? value : 0;
+	}
+
+	// РћРґРЅР° С„СѓРЅРєС†РёСЏ РЅР° РІСЃРµ РєРЅРѕРїРєРё СЃС‚Р°РІРѕРє: С‡С‚Рѕ СЃС‚Р°РІРёРј вЂ” Р±РµСЂС‘Рј РёР· С‚РµРєСЃС‚Р° РєРЅРѕРїРєРё
+	private: System::Void bet_Click(System::Object^ sender, System::EventArgs^ e) {
+		selectedBet = safe_cast<Button^>(sender)->Text;
+		textBox2->Text = selectedBet;
+	}
+
+	// Restart
+	private: System::Void button2_Click(System::Object^ sender, System::EventArgs^ e) {
+		System::Windows::Forms::DialogResult result = MessageBox::Show(
+			L"Reset your balance to 100?", L"Restart", MessageBoxButtons::YesNo, MessageBoxIcon::Question);
+
+		if (result == System::Windows::Forms::DialogResult::Yes)
+			ResetGame();
+	}
+
+	// X
+	private: System::Void button7_Click(System::Object^ sender, System::EventArgs^ e) {
+		Application::Exit();
+	}
 };
 }
-
-
-
