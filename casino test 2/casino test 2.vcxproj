@@ -133,7 +133,9 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
-    <Media Include="..\..\..\..\Documents\My Games\Casino\cat.gif" />
+    <CopyFileToFolders Include="win.gif" />
+    <CopyFileToFolders Include="lose.gif" />
+    <CopyFileToFolders Include="no_money.gif" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
